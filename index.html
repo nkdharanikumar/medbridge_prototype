@@ -1,0 +1,2160 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="MedBridge simulated browser prototype for an HL7 v2 to FHIR R4 pipeline."
+    />
+    <title>MedBridge — Simulated Pipeline Prototype</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --navy: #0b2545;
+        --navy-2: #12365f;
+        --teal: #0a7d76;
+        --teal-dark: #075e59;
+        --amber: #f2a93b;
+        --coral: #d64535;
+        --mist: #eaf2f5;
+        --bg: #f6f9fa;
+        --surface: #ffffff;
+        --surface-2: #f0f6f7;
+        --text: #122132;
+        --muted: #506173;
+        --line: #ccdbe1;
+        --shadow: 0 12px 30px rgba(11, 37, 69, 0.08);
+        --radius: 16px;
+      }
+
+      html[data-theme="dark"] {
+        color-scheme: dark;
+        --navy: #dbeaf7;
+        --navy-2: #a9c8e6;
+        --teal: #56c4ba;
+        --teal-dark: #8ad9d1;
+        --amber: #f6bd60;
+        --mist: #183044;
+        --bg: #071522;
+        --surface: #0d2133;
+        --surface-2: #132b3f;
+        --text: #edf5fa;
+        --muted: #b1c2ce;
+        --line: #2a455a;
+        --shadow: 0 12px 30px rgba(0, 0, 0, 0.24);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        min-width: 320px;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        font-size: 15px;
+        line-height: 1.5;
+      }
+
+      button,
+      input {
+        font: inherit;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      button:focus-visible,
+      [tabindex]:focus-visible {
+        outline: 3px solid var(--amber);
+        outline-offset: 3px;
+      }
+
+      .app-shell {
+        min-height: 100vh;
+      }
+
+      .simulation-banner {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        padding: 9px 16px;
+        border-bottom: 1px solid #ebc177;
+        background: #fff2d9;
+        color: #523406;
+        text-align: center;
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+      }
+
+      html[data-theme="dark"] .simulation-banner {
+        border-bottom-color: #75571e;
+        background: #3a2a0d;
+        color: #ffe4ad;
+      }
+
+      .site-header {
+        border-bottom: 1px solid var(--line);
+        background: var(--surface);
+      }
+
+      .header-inner,
+      .tab-list,
+      main {
+        width: min(1180px, calc(100% - 32px));
+        margin-inline: auto;
+      }
+
+      .header-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 76px;
+        gap: 16px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .brand-mark {
+        display: grid;
+        width: 42px;
+        height: 42px;
+        place-items: center;
+        border-radius: 12px;
+        background: #0b2545;
+        color: #ffffff;
+        font-weight: 900;
+        letter-spacing: -0.05em;
+      }
+
+      .brand-name {
+        color: var(--navy);
+        font-size: 20px;
+        font-weight: 850;
+        letter-spacing: -0.03em;
+      }
+
+      .brand-subtitle {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 650;
+      }
+
+      .theme-button {
+        min-width: 94px;
+        min-height: 44px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--surface);
+        color: var(--text);
+        font-weight: 750;
+      }
+
+      .tabs {
+        position: sticky;
+        top: 39px;
+        z-index: 40;
+        border-bottom: 1px solid var(--line);
+        background: var(--surface);
+      }
+
+      .tab-list {
+        display: flex;
+        gap: 4px;
+        overflow-x: auto;
+        scrollbar-width: thin;
+      }
+
+      .tab {
+        flex: 0 0 auto;
+        min-height: 50px;
+        padding: 0 17px;
+        border: 0;
+        border-bottom: 3px solid transparent;
+        background: transparent;
+        color: var(--muted);
+        font-weight: 750;
+      }
+
+      .tab:hover {
+        color: var(--teal-dark);
+      }
+
+      .tab[aria-selected="true"] {
+        border-bottom-color: var(--teal);
+        color: var(--teal-dark);
+      }
+
+      main {
+        padding-block: 30px 60px;
+      }
+
+      .view[hidden] {
+        display: none;
+      }
+
+      .page-heading {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        margin-bottom: 22px;
+        gap: 20px;
+      }
+
+      .eyebrow {
+        margin: 0 0 5px;
+        color: var(--teal-dark);
+        font-size: 12px;
+        font-weight: 850;
+        letter-spacing: 0.11em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+
+      h1 {
+        margin-bottom: 7px;
+        color: var(--navy);
+        font-size: clamp(28px, 4vw, 42px);
+        line-height: 1.08;
+        letter-spacing: -0.04em;
+      }
+
+      h2 {
+        margin-bottom: 15px;
+        color: var(--navy);
+        font-size: 20px;
+        line-height: 1.2;
+        letter-spacing: -0.02em;
+      }
+
+      h3 {
+        margin-bottom: 7px;
+        color: var(--navy);
+        font-size: 16px;
+      }
+
+      .lead {
+        max-width: 720px;
+        margin-bottom: 0;
+        color: var(--muted);
+        font-size: 16px;
+      }
+
+      .card {
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--surface);
+        box-shadow: var(--shadow);
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        padding: 4px 10px;
+        border: 1px solid transparent;
+        border-radius: 999px;
+        background: var(--mist);
+        color: var(--navy);
+        font-size: 12px;
+        font-weight: 800;
+        white-space: nowrap;
+      }
+
+      .pill::before {
+        width: 7px;
+        height: 7px;
+        margin-right: 7px;
+        border-radius: 50%;
+        background: currentColor;
+        content: "";
+      }
+
+      .pill.success {
+        background: #dff3ee;
+        color: #075e59;
+      }
+
+      .pill.failure {
+        background: #fae7e4;
+        color: #a72f23;
+      }
+
+      .pill.planned {
+        border-color: #d2a146;
+        background: #fff5df;
+        color: #60420c;
+      }
+
+      html[data-theme="dark"] .pill.success {
+        background: #143d39;
+        color: #94e1d8;
+      }
+
+      html[data-theme="dark"] .pill.failure {
+        background: #43201d;
+        color: #ffaaa1;
+      }
+
+      html[data-theme="dark"] .pill.planned {
+        background: #3a2c12;
+        color: #ffdaa0;
+      }
+
+      .button {
+        min-height: 46px;
+        padding: 10px 16px;
+        border: 1px solid transparent;
+        border-radius: 12px;
+        background: var(--teal);
+        color: #ffffff;
+        font-weight: 800;
+        transition:
+          transform 120ms ease,
+          background 120ms ease;
+      }
+
+      .button:hover {
+        background: #075e59;
+      }
+
+      .button:active {
+        transform: translateY(1px);
+      }
+
+      .button.secondary {
+        border-color: var(--line);
+        background: var(--surface);
+        color: var(--text);
+      }
+
+      .button.secondary:hover {
+        border-color: var(--teal);
+        color: var(--teal-dark);
+      }
+
+      .button.amber {
+        background: #d88a13;
+        color: #17202a;
+      }
+
+      .button.danger {
+        border-color: var(--coral);
+        background: transparent;
+        color: var(--coral);
+      }
+
+      .button:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+      }
+
+      .counter-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+        margin-bottom: 18px;
+      }
+
+      .counter-card {
+        position: relative;
+        min-height: 134px;
+        padding: 20px;
+        overflow: hidden;
+      }
+
+      .counter-card::after {
+        position: absolute;
+        inset: 0 0 auto;
+        height: 4px;
+        background: var(--teal);
+        content: "";
+      }
+
+      .counter-card.failure::after {
+        background: var(--coral);
+      }
+
+      .counter-label {
+        display: block;
+        margin-bottom: 9px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 850;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+      }
+
+      .counter-value {
+        display: block;
+        color: var(--navy);
+        font-size: clamp(30px, 4vw, 42px);
+        font-variant-numeric: tabular-nums;
+        font-weight: 850;
+        line-height: 1;
+        letter-spacing: -0.04em;
+      }
+
+      .sim-label {
+        display: block;
+        margin-top: 9px;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 750;
+      }
+
+      .control-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 18px;
+        padding: 14px;
+      }
+
+      .chaos-button[aria-pressed="true"] {
+        border-color: var(--coral);
+        background: var(--coral);
+        color: #ffffff;
+      }
+
+      .dashboard-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.5fr) minmax(300px, 0.8fr);
+        gap: 18px;
+      }
+
+      .panel {
+        min-width: 0;
+        padding: 20px;
+      }
+
+      .panel-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .stage-list {
+        display: grid;
+        gap: 13px;
+      }
+
+      .stage-row {
+        display: grid;
+        grid-template-columns: 116px minmax(0, 1fr) 64px;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .stage-name,
+      .stage-count {
+        font-size: 13px;
+        font-weight: 750;
+      }
+
+      .stage-count {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .track {
+        height: 9px;
+        overflow: hidden;
+        border-radius: 99px;
+        background: var(--mist);
+      }
+
+      .bar {
+        width: 0;
+        height: 100%;
+        border-radius: inherit;
+        background: var(--teal);
+        transition: width 300ms ease;
+      }
+
+      .stage-row.failure .bar {
+        background: var(--coral);
+      }
+
+      .acceptance-note {
+        display: flex;
+        gap: 11px;
+        margin-top: 18px;
+        padding: 13px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--surface-2);
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .acceptance-icon {
+        display: grid;
+        flex: 0 0 24px;
+        height: 24px;
+        place-items: center;
+        border-radius: 50%;
+        background: var(--teal);
+        color: #ffffff;
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .log {
+        max-height: 322px;
+        margin: 0;
+        padding: 0;
+        overflow: auto;
+        list-style: none;
+      }
+
+      .log li {
+        display: grid;
+        grid-template-columns: 62px 1fr;
+        gap: 10px;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .log li:last-child {
+        border: 0;
+      }
+
+      .log time {
+        color: var(--teal-dark);
+        font-variant-numeric: tabular-nums;
+        font-weight: 800;
+      }
+
+      .empty-state {
+        padding: 34px 15px;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      .inspector-layout {
+        display: grid;
+        grid-template-columns: minmax(410px, 0.9fr) minmax(0, 1.1fr);
+        gap: 18px;
+      }
+
+      .table-wrap {
+        max-height: 640px;
+        overflow: auto;
+        border-radius: 12px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        padding: 12px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        white-space: nowrap;
+      }
+
+      th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: var(--surface-2);
+        color: var(--muted);
+        font-size: 11px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      td {
+        font-size: 13px;
+      }
+
+      .message-row {
+        cursor: pointer;
+      }
+
+      .message-row:hover,
+      .message-row.selected {
+        background: var(--mist);
+      }
+
+      .status-text {
+        color: var(--teal-dark);
+        font-weight: 800;
+      }
+
+      .status-text.failure {
+        color: var(--coral);
+      }
+
+      .code-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      .code-block {
+        min-width: 0;
+      }
+
+      .code-label {
+        display: block;
+        margin-bottom: 7px;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 850;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+      }
+
+      pre {
+        min-height: 330px;
+        margin: 0;
+        padding: 15px;
+        overflow: auto;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #071a2a;
+        color: #dff5f2;
+        font: 12px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .detail-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+        margin-bottom: 13px;
+      }
+
+      .architecture-board {
+        padding: 22px;
+      }
+
+      .architecture-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 300px;
+        gap: 22px;
+      }
+
+      .pipeline {
+        min-width: 0;
+      }
+
+      .flow-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 12px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .flow-line {
+        width: 34px;
+        border-top: 3px solid var(--teal);
+      }
+
+      .flow-line.dashed {
+        border-top-color: var(--coral);
+        border-top-style: dashed;
+      }
+
+      .node-row {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 24px;
+        margin-bottom: 24px;
+      }
+
+      .node {
+        position: relative;
+        min-height: 114px;
+        padding: 15px;
+        border: 2px solid var(--line);
+        border-radius: 14px;
+        background: var(--surface);
+        color: var(--text);
+        text-align: left;
+      }
+
+      .node:not(:last-child)::after {
+        position: absolute;
+        top: 50%;
+        left: calc(100% + 2px);
+        width: 24px;
+        border-top: 2px solid var(--teal);
+        content: "";
+      }
+
+      .node:not(:last-child)::before {
+        position: absolute;
+        z-index: 1;
+        top: calc(50% - 4px);
+        left: calc(100% + 20px);
+        border-width: 5px 0 5px 7px;
+        border-style: solid;
+        border-color: transparent transparent transparent var(--teal);
+        content: "";
+      }
+
+      .node:hover,
+      .node.active {
+        border-color: var(--teal);
+        box-shadow: 0 8px 20px rgba(10, 125, 118, 0.14);
+      }
+
+      .node.failure-node:hover,
+      .node.failure-node.active {
+        border-color: var(--coral);
+      }
+
+      .node-kicker {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--teal-dark);
+        font-size: 10px;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .node.failure-node .node-kicker {
+        color: var(--coral);
+      }
+
+      .node strong,
+      .node small {
+        display: block;
+      }
+
+      .node strong {
+        margin-bottom: 4px;
+        color: var(--navy);
+        font-size: 14px;
+      }
+
+      .node small {
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .failure-path {
+        padding: 20px;
+        border: 2px dashed var(--coral);
+        border-radius: 15px;
+        background: color-mix(in srgb, var(--surface) 93%, var(--coral));
+      }
+
+      .failure-path .node-row {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        margin: 0;
+      }
+
+      .failure-path .node:not(:last-child)::after {
+        border-top-color: var(--coral);
+        border-top-style: dashed;
+      }
+
+      .failure-path .node:not(:last-child)::before {
+        border-left-color: var(--coral);
+      }
+
+      .node-detail {
+        align-self: start;
+        padding: 20px;
+        border-left: 4px solid var(--teal);
+      }
+
+      .node-detail p {
+        color: var(--muted);
+      }
+
+      .node-detail ul {
+        padding-left: 18px;
+        color: var(--muted);
+      }
+
+      .node-detail li + li {
+        margin-top: 8px;
+      }
+
+      .guide-card {
+        display: grid;
+        grid-template-columns: 250px minmax(0, 1fr);
+        min-height: 470px;
+        overflow: hidden;
+      }
+
+      .guide-rail {
+        padding: 24px;
+        background: #0b2545;
+        color: #ffffff;
+      }
+
+      .guide-rail h2 {
+        color: #ffffff;
+      }
+
+      .guide-progress {
+        display: grid;
+        gap: 7px;
+        margin-top: 22px;
+      }
+
+      .guide-marker {
+        display: grid;
+        grid-template-columns: 32px 1fr;
+        align-items: center;
+        gap: 9px;
+        min-height: 44px;
+        color: #bad0df;
+        font-size: 13px;
+        font-weight: 750;
+      }
+
+      .guide-marker span:first-child {
+        display: grid;
+        width: 30px;
+        height: 30px;
+        place-items: center;
+        border: 1px solid #55718a;
+        border-radius: 50%;
+      }
+
+      .guide-marker.active {
+        color: #ffffff;
+      }
+
+      .guide-marker.active span:first-child {
+        border-color: var(--amber);
+        background: var(--amber);
+        color: #17202a;
+      }
+
+      .guide-marker.complete span:first-child {
+        border-color: #56c4ba;
+        background: #0a7d76;
+        color: #ffffff;
+      }
+
+      .guide-content {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: clamp(24px, 6vw, 60px);
+      }
+
+      .step-number {
+        color: var(--teal-dark);
+        font-size: 13px;
+        font-weight: 850;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+      }
+
+      .step-title {
+        margin: 10px 0;
+        color: var(--navy);
+        font-size: clamp(28px, 4vw, 46px);
+        line-height: 1.05;
+        letter-spacing: -0.04em;
+      }
+
+      .step-caption {
+        max-width: 650px;
+        margin-bottom: 27px;
+        color: var(--muted);
+        font-size: 17px;
+      }
+
+      .guide-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .guide-result {
+        margin-top: 20px;
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--surface-2);
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .status-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+        margin-bottom: 24px;
+      }
+
+      .status-card {
+        padding: 18px;
+      }
+
+      .status-card p {
+        margin-bottom: 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .status-card .pill {
+        margin-bottom: 13px;
+      }
+
+      .test-card {
+        padding: 20px;
+      }
+
+      .test-table td {
+        white-space: normal;
+        vertical-align: top;
+      }
+
+      .test-table th:nth-child(1) {
+        width: 18%;
+      }
+
+      .test-table th:nth-child(2) {
+        width: 43%;
+      }
+
+      .test-table th:nth-child(3) {
+        width: 24%;
+      }
+
+      .footer-note {
+        margin-top: 18px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      @media (max-width: 940px) {
+        .counter-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+
+        .dashboard-grid,
+        .inspector-layout,
+        .architecture-layout {
+          grid-template-columns: 1fr;
+        }
+
+        .node-detail {
+          border-top: 4px solid var(--teal);
+          border-left: 1px solid var(--line);
+        }
+
+        .node-row {
+          grid-template-columns: repeat(2, 1fr);
+        }
+
+        .node:nth-child(2)::after,
+        .node:nth-child(2)::before {
+          display: none;
+        }
+      }
+
+      @media (max-width: 680px) {
+        .header-inner,
+        .tab-list,
+        main {
+          width: min(100% - 24px, 1180px);
+        }
+
+        .brand-subtitle {
+          display: none;
+        }
+
+        .tabs {
+          top: 58px;
+        }
+
+        main {
+          padding-top: 22px;
+        }
+
+        .page-heading {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .counter-grid,
+        .status-grid,
+        .code-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .counter-card {
+          min-height: 112px;
+        }
+
+        .control-bar .button {
+          flex: 1 1 calc(50% - 10px);
+        }
+
+        .stage-row {
+          grid-template-columns: 94px minmax(0, 1fr) 50px;
+          gap: 8px;
+        }
+
+        .guide-card {
+          grid-template-columns: 1fr;
+        }
+
+        .guide-rail {
+          padding: 18px;
+        }
+
+        .guide-rail h2 {
+          margin-bottom: 10px;
+        }
+
+        .guide-progress {
+          display: flex;
+          margin-top: 0;
+          overflow-x: auto;
+        }
+
+        .guide-marker {
+          display: block;
+          min-width: 38px;
+          font-size: 0;
+        }
+
+        .guide-content {
+          min-height: 390px;
+        }
+
+        .node-row,
+        .failure-path .node-row {
+          grid-template-columns: 1fr;
+          gap: 20px;
+        }
+
+        .node:not(:last-child)::after {
+          top: 100%;
+          left: 50%;
+          width: 0;
+          height: 20px;
+          border-top: 0;
+          border-left: 2px solid var(--teal);
+        }
+
+        .node:not(:last-child)::before {
+          top: calc(100% + 14px);
+          left: calc(50% - 4px);
+          border-width: 7px 5px 0;
+          border-color: var(--teal) transparent transparent;
+        }
+
+        .node:nth-child(2)::after,
+        .node:nth-child(2)::before {
+          display: block;
+        }
+
+        .failure-path .node:not(:last-child)::after {
+          border-top: 0;
+          border-left-color: var(--coral);
+          border-left-style: dashed;
+        }
+
+        .failure-path .node:not(:last-child)::before {
+          border-color: var(--coral) transparent transparent;
+        }
+
+        .test-card {
+          padding: 12px;
+          overflow-x: auto;
+        }
+
+        .test-table {
+          min-width: 660px;
+        }
+      }
+
+      @media (max-width: 400px) {
+        body {
+          font-size: 14px;
+        }
+
+        .simulation-banner {
+          min-height: 58px;
+          padding: 7px 10px;
+        }
+
+        .header-inner {
+          min-height: 65px;
+        }
+
+        .theme-button {
+          min-width: 82px;
+        }
+
+        .tabs {
+          top: 58px;
+        }
+
+        .tab {
+          padding-inline: 13px;
+        }
+
+        .panel,
+        .architecture-board {
+          padding: 15px;
+        }
+
+        .control-bar .button {
+          flex-basis: 100%;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          scroll-behavior: auto !important;
+          transition: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell">
+      <div class="simulation-banner" role="note">
+        SIMULATED PROTOTYPE: runs in the browser, no AWS or real patient data.
+      </div>
+
+      <header class="site-header">
+        <div class="header-inner">
+          <div class="brand" aria-label="MedBridge">
+            <div class="brand-mark" aria-hidden="true">MB</div>
+            <div>
+              <div class="brand-name">MedBridge</div>
+              <div class="brand-subtitle">HL7 v2 → FHIR R4 integration gateway</div>
+            </div>
+          </div>
+          <button class="theme-button" id="themeToggle" type="button" aria-pressed="false">
+            Dark mode
+          </button>
+        </div>
+      </header>
+
+      <nav class="tabs" aria-label="Prototype sections">
+        <div class="tab-list" role="tablist">
+          <button class="tab" role="tab" aria-selected="true" data-tab="dashboard">
+            Dashboard
+          </button>
+          <button class="tab" role="tab" aria-selected="false" data-tab="inspector">
+            Inspector
+          </button>
+          <button class="tab" role="tab" aria-selected="false" data-tab="architecture">
+            Architecture
+          </button>
+          <button class="tab" role="tab" aria-selected="false" data-tab="guided">
+            Guided Demo
+          </button>
+          <button class="tab" role="tab" aria-selected="false" data-tab="testplan">
+            Test Plan
+          </button>
+        </div>
+      </nav>
+
+      <main>
+        <section class="view" id="dashboard" role="tabpanel">
+          <div class="page-heading">
+            <div>
+              <p class="eyebrow">MedBridge ops / simulated</p>
+              <h1>Pipeline control room</h1>
+              <p class="lead">
+                Exercise archive-first ingest, ordered transformation, failure isolation, and
+                effectively-once replay using synthetic messages.
+              </p>
+            </div>
+            <span class="pill success">Browser simulation ready</span>
+          </div>
+
+          <div class="counter-grid" aria-label="Simulated counters">
+            <article class="card counter-card">
+              <span class="counter-label">Ingested</span>
+              <strong class="counter-value" id="countIngested">0</strong>
+              <span class="sim-label">Simulated accepted messages</span>
+            </article>
+            <article class="card counter-card">
+              <span class="counter-label">FHIR stored</span>
+              <strong class="counter-value" id="countStored">0</strong>
+              <span class="sim-label">Simulated conditional writes</span>
+            </article>
+            <article class="card counter-card failure">
+              <span class="counter-label">In DLQ</span>
+              <strong class="counter-value" id="countDlq">0</strong>
+              <span class="sim-label">Simulated transform failures</span>
+            </article>
+            <article class="card counter-card">
+              <span class="counter-label">Duplicates ignored</span>
+              <strong class="counter-value" id="countDuplicates">0</strong>
+              <span class="sim-label">Simulated idempotent rejects</span>
+            </article>
+          </div>
+
+          <div class="card control-bar" aria-label="Simulation controls">
+            <button class="button" type="button" data-action="send10">Send 10</button>
+            <button class="button" type="button" data-action="flood">Flood 1,000</button>
+            <button
+              class="button secondary chaos-button"
+              id="chaosToggle"
+              type="button"
+              aria-pressed="false"
+              data-action="chaos"
+            >
+              Chaos OFF
+            </button>
+            <button class="button secondary" type="button" data-action="duplicates">
+              Resend 25 duplicates
+            </button>
+            <button class="button amber" type="button" data-action="replay">
+              Fix bug and replay
+            </button>
+            <button class="button danger" type="button" data-action="reset">Reset</button>
+          </div>
+
+          <div class="dashboard-grid">
+            <article class="card panel">
+              <div class="panel-head">
+                <h2>Stage counts</h2>
+                <span class="pill">All numbers simulated</span>
+              </div>
+              <div class="stage-list">
+                <div class="stage-row">
+                  <span class="stage-name">S3 archived</span>
+                  <div class="track"><div class="bar" id="barArchived"></div></div>
+                  <span class="stage-count" id="stageArchived">0</span>
+                </div>
+                <div class="stage-row">
+                  <span class="stage-name">SQS accepted</span>
+                  <div class="track"><div class="bar" id="barQueued"></div></div>
+                  <span class="stage-count" id="stageQueued">0</span>
+                </div>
+                <div class="stage-row">
+                  <span class="stage-name">FHIR stored</span>
+                  <div class="track"><div class="bar" id="barStored"></div></div>
+                  <span class="stage-count" id="stageStored">0</span>
+                </div>
+                <div class="stage-row">
+                  <span class="stage-name">Events emitted</span>
+                  <div class="track"><div class="bar" id="barEvents"></div></div>
+                  <span class="stage-count" id="stageEvents">0</span>
+                </div>
+                <div class="stage-row failure">
+                  <span class="stage-name">DLQ</span>
+                  <div class="track"><div class="bar" id="barDlq"></div></div>
+                  <span class="stage-count" id="stageDlq">0</span>
+                </div>
+              </div>
+              <div class="acceptance-note">
+                <span class="acceptance-icon" aria-hidden="true">✓</span>
+                <span>
+                  <strong>Acceptance gate:</strong> simulated HTTP 200 is returned only after the
+                  raw HL7 archive and SQS FIFO pointer both succeed.
+                </span>
+              </div>
+            </article>
+
+            <article class="card panel">
+              <div class="panel-head">
+                <h2>Activity log</h2>
+                <span class="pill" id="chaosStatus">Chaos off</span>
+              </div>
+              <ul class="log" id="activityLog" aria-live="polite">
+                <li>
+                  <time>Ready</time>
+                  <span>Simulation initialized. Send a synthetic batch to begin.</span>
+                </li>
+              </ul>
+            </article>
+          </div>
+        </section>
+
+        <section class="view" id="inspector" role="tabpanel" hidden>
+          <div class="page-heading">
+            <div>
+              <p class="eyebrow">Synthetic payload explorer</p>
+              <h1>Message inspector</h1>
+              <p class="lead">
+                Select a message to compare its synthetic HL7 v2 source with pseudonymized FHIR R4.
+              </p>
+            </div>
+            <span class="pill">No real patient data</span>
+          </div>
+
+          <div class="inspector-layout">
+            <article class="card panel">
+              <div class="panel-head">
+                <h2>Messages</h2>
+                <span class="pill" id="messageCount">0 shown</span>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>MSH-10</th>
+                      <th>Type</th>
+                      <th>Token</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="messageRows">
+                    <tr>
+                      <td colspan="4" class="empty-state">Send a batch from the Dashboard.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </article>
+
+            <article class="card panel">
+              <div class="panel-head">
+                <h2>Payload comparison</h2>
+                <span class="pill success">FHIR R4</span>
+              </div>
+              <div class="detail-meta" id="detailMeta">
+                <span class="pill">Select a message</span>
+              </div>
+              <div class="code-grid">
+                <div class="code-block">
+                  <span class="code-label">Synthetic HL7 v2</span>
+                  <pre id="hl7Code">No message selected.</pre>
+                </div>
+                <div class="code-block">
+                  <span class="code-label">Pseudonymized FHIR R4 JSON</span>
+                  <pre id="fhirCode">No message selected.</pre>
+                </div>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="view" id="architecture" role="tabpanel" hidden>
+          <div class="page-heading">
+            <div>
+              <p class="eyebrow">Event-driven AWS design</p>
+              <h1>Architecture explorer</h1>
+              <p class="lead">
+                Select any component for its responsibility. The dashed coral route isolates
+                failures and re-drives the original S3 object.
+              </p>
+            </div>
+            <span class="pill planned">FHIR read API planned</span>
+          </div>
+
+          <div class="card architecture-board">
+            <div class="architecture-layout">
+              <div class="pipeline">
+                <div class="flow-label"><span class="flow-line"></span>Main path</div>
+                <div class="node-row">
+                  <button class="node active" type="button" data-node="source">
+                    <span class="node-kicker">Origin</span>
+                    <strong>HL7 source</strong>
+                    <small>Hospital or lab</small>
+                  </button>
+                  <button class="node" type="button" data-node="forwarder">
+                    <span class="node-kicker">Edge</span>
+                    <strong>Edge forwarder</strong>
+                    <small>MLLP to HTTPS</small>
+                  </button>
+                  <button class="node" type="button" data-node="gateway">
+                    <span class="node-kicker">Ingress</span>
+                    <strong>API Gateway</strong>
+                    <small>HTTPS / TLS</small>
+                  </button>
+                  <button class="node" type="button" data-node="ingest">
+                    <span class="node-kicker">Protect</span>
+                    <strong>Ingest Lambda</strong>
+                    <small>Token + archive</small>
+                  </button>
+                </div>
+                <div class="node-row">
+                  <button class="node" type="button" data-node="archive">
+                    <span class="node-kicker">Immutable</span>
+                    <strong>S3 Object Lock</strong>
+                    <small>Raw HL7 / WORM</small>
+                  </button>
+                  <button class="node" type="button" data-node="queue">
+                    <span class="node-kicker">Ordered</span>
+                    <strong>SQS FIFO</strong>
+                    <small>Group = patient token</small>
+                  </button>
+                  <button class="node" type="button" data-node="transformer">
+                    <span class="node-kicker">Map</span>
+                    <strong>Transformer Lambda</strong>
+                    <small>S3 to FHIR R4</small>
+                  </button>
+                  <button class="node" type="button" data-node="database">
+                    <span class="node-kicker">Idempotent</span>
+                    <strong>DynamoDB</strong>
+                    <small>FHIR + conditional write</small>
+                  </button>
+                </div>
+                <div class="node-row">
+                  <button class="node" type="button" data-node="events">
+                    <span class="node-kicker">Fan-out</span>
+                    <strong>EventBridge</strong>
+                    <small>Clinical events</small>
+                  </button>
+                  <button class="node" type="button" data-node="fhir">
+                    <span class="node-kicker">Planned</span>
+                    <strong>FHIR read API</strong>
+                    <small>Reads DynamoDB</small>
+                  </button>
+                </div>
+
+                <div class="flow-label">
+                  <span class="flow-line dashed"></span>Failure and replay path
+                </div>
+                <div class="failure-path">
+                  <div class="node-row">
+                    <button class="node failure-node" type="button" data-node="dlq">
+                      <span class="node-kicker">Isolate</span>
+                      <strong>Dead-letter queue</strong>
+                      <small>Failed messages</small>
+                    </button>
+                    <button class="node failure-node" type="button" data-node="replay">
+                      <span class="node-kicker">Recover</span>
+                      <strong>Replay Lambda</strong>
+                      <small>Re-drive from S3</small>
+                    </button>
+                    <button class="node failure-node" type="button" data-node="archive">
+                      <span class="node-kicker">Source of truth</span>
+                      <strong>S3 Object Lock</strong>
+                      <small>Same message ID</small>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <aside class="card node-detail" aria-live="polite">
+                <p class="eyebrow" id="nodeKicker">Origin</p>
+                <h2 id="nodeTitle">HL7 source</h2>
+                <p id="nodeDescription">
+                  A hospital or lab sends synthetic HL7 v2 messages through its existing MLLP
+                  feed.
+                </p>
+                <ul id="nodeFacts">
+                  <li>Source retries when ingest returns a simulated 5xx.</li>
+                  <li>Sender and MSH-10 form the idempotency key.</li>
+                </ul>
+              </aside>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="guided" role="tabpanel" hidden>
+          <div class="page-heading">
+            <div>
+              <p class="eyebrow">Six-step walkthrough</p>
+              <h1>Guided demo</h1>
+              <p class="lead">
+                Advance one step at a time. Each Next action updates the shared simulated pipeline.
+              </p>
+            </div>
+            <button class="button secondary" type="button" id="restartGuide">Restart guide</button>
+          </div>
+
+          <div class="card guide-card">
+            <aside class="guide-rail">
+              <h2>Demo sequence</h2>
+              <div class="guide-progress" id="guideProgress"></div>
+            </aside>
+            <div class="guide-content">
+              <span class="step-number" id="stepNumber">Step 1 of 6</span>
+              <h2 class="step-title" id="stepTitle">Send a clean batch</h2>
+              <p class="step-caption" id="stepCaption">
+                Send 10 synthetic messages. Each is accepted only after the simulated S3 archive
+                and SQS FIFO pointer succeed.
+              </p>
+              <div class="guide-actions">
+                <button class="button" id="guideNext" type="button">Run step &amp; Next</button>
+                <span class="pill" id="guideActionLabel">Action: Send 10</span>
+              </div>
+              <div class="guide-result" id="guideResult">
+                Ready. This walkthrough uses the same counters as the Dashboard.
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="testplan" role="tabpanel" hidden>
+          <div class="page-heading">
+            <div>
+              <p class="eyebrow">Deck slides 11–12</p>
+              <h1>Progress and test plan</h1>
+              <p class="lead">
+                Architecture and the browser concept are documented; live implementation,
+                measurements, and validation remain future work.
+              </p>
+            </div>
+            <span class="pill planned">No measured results yet</span>
+          </div>
+
+          <div class="status-grid">
+            <article class="card status-card">
+              <span class="pill success">Done</span>
+              <h3>Architecture and specs</h3>
+              <p>
+                Serverless design, ADT^A01 and ORU^R01 mappings, pseudonymization flow, and
+                Terraform module design.
+              </p>
+            </article>
+            <article class="card status-card">
+              <span class="pill planned">Partial</span>
+              <h3>Simulated demo</h3>
+              <p>
+                This clickable concept demonstrates the intended flow. It has no live AWS services
+                or code execution behind it.
+              </p>
+            </article>
+            <article class="card status-card">
+              <span class="pill">Future</span>
+              <h3>Build and validation</h3>
+              <p>
+                Python transformer, AWS deployment, Terraform, S3 replay run, FHIR reads, and the
+                planned tests below.
+              </p>
+            </article>
+          </div>
+
+          <article class="card test-card">
+            <div class="panel-head">
+              <h2>Planned validation</h2>
+              <span class="pill">Synthetic data only</span>
+            </div>
+            <table class="test-table">
+              <thead>
+                <tr>
+                  <th>Test</th>
+                  <th>Method (synthetic data)</th>
+                  <th>Target</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Transformer unit tests</strong></td>
+                  <td>
+                    pytest on ADT^A01 and ORU^R01: valid FHIR output; same patient gives the same
+                    token.
+                  </td>
+                  <td>All tests pass</td>
+                  <td><span class="pill planned">Planned</span></td>
+                </tr>
+                <tr>
+                  <td><strong>Flood load test</strong></td>
+                  <td>Send 1,000+ synthetic messages end to end.</td>
+                  <td>Throughput (msg/s) and p95 latency</td>
+                  <td><span class="pill planned">Planned</span></td>
+                </tr>
+                <tr>
+                  <td><strong>Chaos to replay</strong></td>
+                  <td>
+                    Inject 20% Lambda failures, fill the DLQ, fix the bug, and replay from S3.
+                  </td>
+                  <td>0 messages lost after replay</td>
+                  <td><span class="pill planned">Planned</span></td>
+                </tr>
+                <tr>
+                  <td><strong>Duplicate burst</strong></td>
+                  <td>Resend a batch with identical sender + MSH-10.</td>
+                  <td>0 duplicate DynamoDB records</td>
+                  <td><span class="pill planned">Planned</span></td>
+                </tr>
+                <tr>
+                  <td><strong>Unit cost check</strong></td>
+                  <td>Record Lambda, SQS, S3, and DynamoDB billing for the test batch.</td>
+                  <td>Cost per 1,000 messages</td>
+                  <td><span class="pill planned">Planned</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </article>
+          <p class="footer-note">
+            Verification standard from the deck: no measured numbers are fabricated. Planned
+            cells are filled only from real pytest, CloudWatch, and AWS billing output after a live
+            test.
+          </p>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      (() => {
+        "use strict";
+
+        const state = {
+          ingested: 0,
+          stored: 0,
+          dlq: 0,
+          duplicates: 0,
+          archived: 0,
+          queued: 0,
+          events: 0,
+          chaos: false,
+          sequence: 1,
+          messages: [],
+          selectedId: null,
+          guideStep: 0,
+        };
+
+        const fmt = new Intl.NumberFormat("en-US");
+        const $ = (selector) => document.querySelector(selector);
+        const $$ = (selector) => [...document.querySelectorAll(selector)];
+
+        const guideSteps = [
+          {
+            short: "Send",
+            title: "Send a clean batch",
+            caption:
+              "Send 10 synthetic messages. Each is accepted only after the simulated S3 archive and SQS FIFO pointer succeed.",
+            action: "Send 10",
+            run: () => sendBatch(10),
+          },
+          {
+            short: "Chaos",
+            title: "Turn chaos on",
+            caption:
+              "Enable a deterministic simulation of approximately 20% transformer failures. Ingest remains archive-first.",
+            action: "Chaos ON",
+            run: () => setChaos(true),
+          },
+          {
+            short: "Flood",
+            title: "Flood the pipeline",
+            caption:
+              "Send 1,000 synthetic messages. Healthy messages reach DynamoDB and EventBridge while transform failures isolate in the DLQ.",
+            action: "Flood 1,000",
+            run: () => sendBatch(1000),
+          },
+          {
+            short: "DLQ",
+            title: "Inspect isolated failures",
+            caption:
+              "The DLQ fills without blocking healthy patient groups. Every failed message still points to its immutable raw HL7 object.",
+            action: "Observe DLQ",
+            run: () => logEvent(`${fmt.format(state.dlq)} simulated message(s) isolated in the DLQ.`),
+          },
+          {
+            short: "Replay",
+            title: "Fix the bug and replay",
+            caption:
+              "Disable the injected bug and re-drive failed messages from S3. Replay reuses each original message ID.",
+            action: "Fix and replay",
+            run: () => replayDlq(),
+          },
+          {
+            short: "Dedupe",
+            title: "Prove idempotency",
+            caption:
+              "Resend 25 existing sender + MSH-10 pairs. Conditional writes ignore them, demonstrating effectively-once processing.",
+            action: "Resend 25",
+            run: () => resendDuplicates(),
+          },
+        ];
+
+        const nodeContent = {
+          source: {
+            kicker: "Origin",
+            title: "HL7 source",
+            description:
+              "A hospital or lab sends synthetic HL7 v2 messages through its existing MLLP feed.",
+            facts: [
+              "Source retries when ingest returns a simulated 5xx.",
+              "Sender and MSH-10 form the idempotency key.",
+            ],
+          },
+          forwarder: {
+            kicker: "Edge",
+            title: "Edge forwarder",
+            description:
+              "A thin Python forwarder converts the on-premise MLLP feed to HTTPS without changing hospital systems.",
+            facts: ["Forwards one HL7 message per request.", "Retries safely when acceptance fails."],
+          },
+          gateway: {
+            kicker: "Ingress",
+            title: "API Gateway",
+            description: "Provides the TLS-protected HTTPS entry point for the ingest Lambda.",
+            facts: ["Routes requests to ingest.", "Returns the ingest result to the edge forwarder."],
+          },
+          ingest: {
+            kicker: "Protect",
+            title: "Ingest Lambda",
+            description:
+              "Creates a deterministic keyed-HMAC patient token, archives raw HL7, and then sends only a pointer to the FIFO queue.",
+            facts: [
+              "Returns 200 only after archive and enqueue both succeed.",
+              "Raw patient IDs stay out of the queue and logs.",
+            ],
+          },
+          archive: {
+            kicker: "Immutable",
+            title: "S3 Object Lock",
+            description:
+              "Stores the original raw HL7 as a WORM archive before the message is acknowledged.",
+            facts: [
+              "Acts as the source of truth for replay.",
+              "Replay reuses the original message ID.",
+            ],
+          },
+          queue: {
+            kicker: "Ordered",
+            title: "SQS FIFO",
+            description:
+              "Carries an S3 pointer and groups work by pseudonymized patient token to preserve per-patient order.",
+            facts: [
+              "Message group equals the patient token.",
+              "FIFO deduplication covers duplicate submissions within five minutes.",
+            ],
+          },
+          transformer: {
+            kicker: "Map",
+            title: "Transformer Lambda",
+            description:
+              "Reads archived HL7 from S3 and maps supported ADT^A01 and ORU^R01 messages to FHIR R4.",
+            facts: ["Does not receive raw HL7 in the queue.", "Failures retry before moving to the DLQ."],
+          },
+          database: {
+            kicker: "Idempotent",
+            title: "DynamoDB",
+            description:
+              "Stores FHIR resources with a conditional write keyed by sender + MSH-10.",
+            facts: [
+              "Duplicate retries do not create new records.",
+              "Idempotency extends beyond the FIFO deduplication window.",
+            ],
+          },
+          events: {
+            kicker: "Fan-out",
+            title: "EventBridge",
+            description:
+              "Emits a clinical event after a successful conditional write for downstream subscribers.",
+            facts: ["Decouples downstream consumers.", "Emits only after FHIR storage succeeds."],
+          },
+          fhir: {
+            kicker: "Planned",
+            title: "FHIR read API",
+            description:
+              "A planned read surface for Patient and Observation resources stored in DynamoDB.",
+            facts: ["Not implemented in this prototype.", "Intended for modern downstream apps."],
+          },
+          dlq: {
+            kicker: "Isolate",
+            title: "Dead-letter queue",
+            description:
+              "Receives transform failures after retries while healthy patient groups continue.",
+            facts: ["Contains pointers rather than raw PHI.", "Supports controlled replay after a fix."],
+          },
+          replay: {
+            kicker: "Recover",
+            title: "Replay Lambda",
+            description:
+              "Re-drives failed work from the immutable S3 archive after a mapping fix.",
+            facts: [
+              "Reuses sender + MSH-10.",
+              "Conditional writes make replay effectively-once, not exactly-once.",
+            ],
+          },
+        };
+
+        function deterministicToken(patientId) {
+          // Browser-only deterministic stand-in for the designed KMS-backed keyed HMAC.
+          let hash = 2166136261 ^ 0x4d424b31;
+          const input = `medbridge-demo-key:HOSP:${patientId}`;
+          for (let i = 0; i < input.length; i += 1) {
+            hash ^= input.charCodeAt(i);
+            hash = Math.imul(hash, 16777619);
+          }
+          return `tok-${(hash >>> 0).toString(16).padStart(8, "0")}`;
+        }
+
+        function makeMessage(index, failed) {
+          const messageId = `MSG${String(index).padStart(6, "0")}`;
+          const patientId = `SYN-${String(99812 + index).padStart(5, "0")}`;
+          const token = deterministicToken(patientId);
+          const type = index % 4 === 0 ? "ORU^R01" : "ADT^A01";
+          const isObservation = type === "ORU^R01";
+          const resourceId = isObservation ? `obs-${token.slice(4)}` : token;
+          const hl7 = isObservation
+            ? [
+                `MSH|^~\\&|LIS|HOSP|MEDBRIDGE|AWS|202611221200||ORU^R01|${messageId}|P|2.5`,
+                `PID|1||${patientId}^^^HOSP^MR||SYNTHETIC^PATIENT||19900101|F`,
+                `OBR|1|||SYNTHETIC-PANEL`,
+                `OBX|1|NM|SYNTHETIC-RESULT||42|unit`,
+              ].join("\n")
+            : [
+                `MSH|^~\\&|HIS|HOSP|MEDBRIDGE|AWS|202611221200||ADT^A01|${messageId}|P|2.5`,
+                `PID|1||${patientId}^^^HOSP^MR||SYNTHETIC^PATIENT||19900101|F`,
+                "PV1|1|I|WARD-3B^302^1",
+              ].join("\n");
+          const fhir = isObservation
+            ? {
+                resourceType: "Observation",
+                id: resourceId,
+                meta: { source: `urn:medbridge:HOSP:${messageId}` },
+                status: "final",
+                subject: { reference: `Patient/${token}` },
+                valueQuantity: { value: 42, unit: "unit" },
+              }
+            : {
+                resourceType: "Patient",
+                id: resourceId,
+                meta: { source: `urn:medbridge:HOSP:${messageId}` },
+                active: true,
+                gender: "female",
+                birthDate: "1990-01-01",
+              };
+          return {
+            messageId,
+            patientId,
+            token,
+            type,
+            status: failed ? "DLQ" : "Stored",
+            hl7,
+            fhir,
+          };
+        }
+
+        function sendBatch(size) {
+          const start = state.sequence;
+          const newMessages = [];
+          let failures = 0;
+          for (let i = 0; i < size; i += 1) {
+            const index = start + i;
+            const failed = state.chaos && index % 5 === 0;
+            if (failed) failures += 1;
+            newMessages.push(makeMessage(index, failed));
+          }
+          state.sequence += size;
+          state.ingested += size;
+          state.archived += size;
+          state.queued += size;
+          state.stored += size - failures;
+          state.events += size - failures;
+          state.dlq += failures;
+          state.messages = [...newMessages, ...state.messages].slice(0, 120);
+          if (!state.selectedId && newMessages.length) {
+            state.selectedId = newMessages[0].messageId;
+          }
+          logEvent(
+            `Accepted ${fmt.format(size)} synthetic message(s) after archive + queue; ${fmt.format(
+              failures,
+            )} routed to DLQ.`,
+          );
+          render();
+          return `${fmt.format(size)} accepted; ${fmt.format(failures)} entered the DLQ.`;
+        }
+
+        function setChaos(value) {
+          state.chaos = value;
+          logEvent(
+            value
+              ? "Chaos enabled: deterministic ~20% transformer failures."
+              : "Chaos disabled: transformer operating normally.",
+          );
+          render();
+          return value ? "Chaos is ON." : "Chaos is OFF.";
+        }
+
+        function replayDlq() {
+          setChaos(false);
+          const replayed = state.dlq;
+          if (replayed === 0) {
+            logEvent("Replay requested; DLQ is already empty.");
+            render();
+            return "DLQ is already at 0.";
+          }
+          state.messages.forEach((message) => {
+            if (message.status === "DLQ") message.status = "Replayed";
+          });
+          state.stored += replayed;
+          state.events += replayed;
+          state.dlq = 0;
+          logEvent(
+            `Replayed ${fmt.format(replayed)} from S3 with original message IDs; DLQ is 0.`,
+          );
+          render();
+          return `${fmt.format(replayed)} replayed; DLQ is now 0.`;
+        }
+
+        function resendDuplicates() {
+          const available = Math.min(25, state.messages.length);
+          if (available === 0) {
+            logEvent("Duplicate resend skipped: send a synthetic batch first.");
+            render();
+            return "No messages exist yet. Send a batch first.";
+          }
+          state.ingested += available;
+          state.archived += available;
+          state.queued += available;
+          state.duplicates += available;
+          logEvent(
+            `Ignored ${available} duplicate sender + MSH-10 pair(s); no new FHIR records.`,
+          );
+          render();
+          return `${available} duplicate(s) ignored by conditional write.`;
+        }
+
+        function resetSimulation() {
+          Object.assign(state, {
+            ingested: 0,
+            stored: 0,
+            dlq: 0,
+            duplicates: 0,
+            archived: 0,
+            queued: 0,
+            events: 0,
+            chaos: false,
+            sequence: 1,
+            messages: [],
+            selectedId: null,
+          });
+          $("#activityLog").innerHTML = "";
+          logEvent("Simulation reset. All simulated counters returned to 0.", "Reset");
+          render();
+          return "Simulation reset.";
+        }
+
+        function logEvent(text, label) {
+          const log = $("#activityLog");
+          const item = document.createElement("li");
+          const time = document.createElement("time");
+          const message = document.createElement("span");
+          time.textContent =
+            label ||
+            new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+          message.textContent = text;
+          item.append(time, message);
+          log.prepend(item);
+          while (log.children.length > 14) log.lastElementChild.remove();
+        }
+
+        function renderCounters() {
+          $("#countIngested").textContent = fmt.format(state.ingested);
+          $("#countStored").textContent = fmt.format(state.stored);
+          $("#countDlq").textContent = fmt.format(state.dlq);
+          $("#countDuplicates").textContent = fmt.format(state.duplicates);
+          $("#stageArchived").textContent = fmt.format(state.archived);
+          $("#stageQueued").textContent = fmt.format(state.queued);
+          $("#stageStored").textContent = fmt.format(state.stored);
+          $("#stageEvents").textContent = fmt.format(state.events);
+          $("#stageDlq").textContent = fmt.format(state.dlq);
+          const max = Math.max(state.ingested, 1);
+          [
+            ["Archived", state.archived],
+            ["Queued", state.queued],
+            ["Stored", state.stored],
+            ["Events", state.events],
+            ["Dlq", state.dlq],
+          ].forEach(([name, value]) => {
+            $(`#bar${name}`).style.width = `${Math.min(100, (value / max) * 100)}%`;
+          });
+          const chaosButton = $("#chaosToggle");
+          chaosButton.setAttribute("aria-pressed", String(state.chaos));
+          chaosButton.textContent = state.chaos ? "Chaos ON" : "Chaos OFF";
+          const chaosStatus = $("#chaosStatus");
+          chaosStatus.textContent = state.chaos ? "Chaos on · ~20%" : "Chaos off";
+          chaosStatus.className = `pill${state.chaos ? " failure" : ""}`;
+        }
+
+        function renderMessages() {
+          const tbody = $("#messageRows");
+          tbody.innerHTML = "";
+          $("#messageCount").textContent = `${fmt.format(state.messages.length)} shown`;
+          if (!state.messages.length) {
+            const row = document.createElement("tr");
+            row.innerHTML =
+              '<td colspan="4" class="empty-state">Send a batch from the Dashboard.</td>';
+            tbody.append(row);
+            $("#detailMeta").innerHTML = '<span class="pill">Select a message</span>';
+            $("#hl7Code").textContent = "No message selected.";
+            $("#fhirCode").textContent = "No message selected.";
+            return;
+          }
+
+          state.messages.forEach((message) => {
+            const row = document.createElement("tr");
+            row.className = `message-row${message.messageId === state.selectedId ? " selected" : ""}`;
+            row.tabIndex = 0;
+            row.dataset.messageId = message.messageId;
+            const failureClass = message.status === "DLQ" ? " failure" : "";
+            row.innerHTML = `
+              <td>${message.messageId}</td>
+              <td>${message.type}</td>
+              <td>${message.token}</td>
+              <td><span class="status-text${failureClass}">${message.status}</span></td>
+            `;
+            row.addEventListener("click", () => selectMessage(message.messageId));
+            row.addEventListener("keydown", (event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                selectMessage(message.messageId);
+              }
+            });
+            tbody.append(row);
+          });
+
+          const selected =
+            state.messages.find((message) => message.messageId === state.selectedId) ||
+            state.messages[0];
+          state.selectedId = selected.messageId;
+          $("#detailMeta").innerHTML = `
+            <span class="pill">${selected.type}</span>
+            <span class="pill">${selected.token}</span>
+            <span class="pill${selected.status === "DLQ" ? " failure" : " success"}">${selected.status}</span>
+          `;
+          $("#hl7Code").textContent = selected.hl7;
+          $("#fhirCode").textContent = JSON.stringify(selected.fhir, null, 2);
+        }
+
+        function selectMessage(messageId) {
+          state.selectedId = messageId;
+          renderMessages();
+        }
+
+        function renderGuide() {
+          const index = Math.min(state.guideStep, guideSteps.length - 1);
+          const step = guideSteps[index];
+          $("#guideProgress").innerHTML = guideSteps
+            .map(
+              (item, itemIndex) => `
+                <div class="guide-marker${itemIndex === index ? " active" : ""}${
+                  itemIndex < state.guideStep ? " complete" : ""
+                }">
+                  <span>${itemIndex < state.guideStep ? "✓" : itemIndex + 1}</span>
+                  <span>${item.short}</span>
+                </div>
+              `,
+            )
+            .join("");
+          $("#stepNumber").textContent = `Step ${index + 1} of ${guideSteps.length}`;
+          $("#stepTitle").textContent = step.title;
+          $("#stepCaption").textContent = step.caption;
+          $("#guideActionLabel").textContent = `Action: ${step.action}`;
+          $("#guideNext").textContent =
+            state.guideStep >= guideSteps.length ? "Demo complete" : "Run step & Next";
+          $("#guideNext").disabled = state.guideStep >= guideSteps.length;
+        }
+
+        function render() {
+          renderCounters();
+          renderMessages();
+          renderGuide();
+        }
+
+        function switchTab(tabName) {
+          $$(".tab").forEach((tab) => {
+            const active = tab.dataset.tab === tabName;
+            tab.setAttribute("aria-selected", String(active));
+          });
+          $$(".view").forEach((view) => {
+            view.hidden = view.id !== tabName;
+          });
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+
+        $$(".tab").forEach((tab) => {
+          tab.addEventListener("click", () => switchTab(tab.dataset.tab));
+        });
+
+        $$("[data-action]").forEach((button) => {
+          button.addEventListener("click", () => {
+            const action = button.dataset.action;
+            if (action === "send10") sendBatch(10);
+            if (action === "flood") sendBatch(1000);
+            if (action === "chaos") setChaos(!state.chaos);
+            if (action === "duplicates") resendDuplicates();
+            if (action === "replay") replayDlq();
+            if (action === "reset") resetSimulation();
+          });
+        });
+
+        $$(".node").forEach((node) => {
+          node.addEventListener("click", () => {
+            const content = nodeContent[node.dataset.node];
+            $$(".node").forEach((item) => item.classList.remove("active"));
+            node.classList.add("active");
+            $("#nodeKicker").textContent = content.kicker;
+            $("#nodeTitle").textContent = content.title;
+            $("#nodeDescription").textContent = content.description;
+            $("#nodeFacts").innerHTML = content.facts.map((fact) => `<li>${fact}</li>`).join("");
+          });
+        });
+
+        $("#guideNext").addEventListener("click", () => {
+          if (state.guideStep >= guideSteps.length) return;
+          const current = guideSteps[state.guideStep];
+          const result = current.run();
+          $("#guideResult").textContent =
+            typeof result === "string" ? result : `Completed: ${current.action}.`;
+          state.guideStep += 1;
+          renderGuide();
+        });
+
+        $("#restartGuide").addEventListener("click", () => {
+          state.guideStep = 0;
+          $("#guideResult").textContent =
+            "Guide restarted. Existing Dashboard counters are preserved.";
+          renderGuide();
+        });
+
+        $("#themeToggle").addEventListener("click", () => {
+          const isDark = document.documentElement.dataset.theme === "dark";
+          document.documentElement.dataset.theme = isDark ? "light" : "dark";
+          $("#themeToggle").textContent = isDark ? "Dark mode" : "Light mode";
+          $("#themeToggle").setAttribute("aria-pressed", String(!isDark));
+        });
+
+        render();
+      })();
+    </script>
+  </body>
+</html>
